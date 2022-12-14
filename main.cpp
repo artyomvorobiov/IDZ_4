@@ -19,7 +19,7 @@ pthread_mutex_t mutex ; // мьютекс для условных перемен
 pthread_cond_t not_full ;
 
 // поток-читатель блокируется этой условной переменной,
-// когда количество занятых ячеек становится равно 0
+// когда количество занятых кабинетов становится равно 0
 pthread_cond_t not_empty ;
 
 //стартовая функция потоков – посетители
@@ -98,32 +98,34 @@ int main() {
     //запуск производителей
     std::cout << "Enter the number of patients today:" << std::endl;
     std::cin >> n;
+    if (n > 0) {
+        pthread_t threadP[n];
+        int producers[n];
+        for (i = 0; i < n; i++) {
+            producers[i] = i + 1;
+            pthread_create(&threadP[i], nullptr, Producer, (void *) (producers + i));
+        }
 
-    pthread_t threadP[n] ;
-    int producers[n];
-    for (i=0 ; i<n ; i++) {
-        producers[i] = i + 1;
-        pthread_create(&threadP[i],nullptr,Producer, (void*)(producers+i)) ;
+        pthread_t threadC[2];
+        int consumers[2];
+        for (i = 0; i < 2; i++) {
+            consumers[0] = i + 1;
+            pthread_create(&threadC[i], nullptr, Consumer, (void *) (consumers + i));
+        }
+
+        for (i = 0; i < n; i++) {
+            pthread_join(threadP[i], nullptr);
+        }
+
+        for (i = 0; i < 2; i++) {
+            pthread_join(threadC[i], nullptr);
+        }
     }
-
-    pthread_t threadC[2] ;
-    int consumers[2];
-    for (i = 0; i < 2; i++) {
-        consumers[0] = i + 1;
-        pthread_create(&threadC[i], nullptr, Consumer, (void *) (consumers + i));
+    else if (n == 0) {
+        std::cout << "Today there were no patients! Doctors can chill." << std::endl;
     }
-
-    for (i = 0; i < n; i++) {
-        pthread_join(threadP[i], nullptr);
+    else {
+        std::cout << "There cannot be less than 0 patients." << std::endl;
     }
-
-    for (i = 0; i < 2; i++) {
-        pthread_join(threadC[i], nullptr);
-    }
-
-    //пусть главный поток тоже будет потребителем
-    /*int mNum = 0;
-    Consumer((void*)&mNum) ;*/
-    // Consumer((void*)&mNum) ;
     return 0;
 }
