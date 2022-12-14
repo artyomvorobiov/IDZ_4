@@ -5,7 +5,7 @@
 #include <iostream>
 
 const int bufSize = 3;
-int buf[3] = {0,0,0} ; //буфер
+int buf[3] = {-1,-1,-1} ; //буфер(кабинеты)
 int front = 0 ; //индекс для чтения из буфера
 int rear = 0 ; //индекс для записи в буфер
 int count = 0 ; //количество занятых ячеек буфера
@@ -42,7 +42,8 @@ pthread_cond_t not_empty ;
 
         //конец критической секции
         pthread_mutex_unlock(&mutex) ;
-        if ((buf[rear] == 0) && (buf[(rear+1)%bufSize] != pNum) && (buf[(rear+2)%bufSize] != pNum)) {
+        //sleep(1);
+        if ((buf[rear%bufSize] == -1) && (buf[(rear+1)%bufSize] != pNum) && (buf[(rear+2)%bufSize] != pNum)) {
             buf[rear] = pNum;
             printf("Patient %d: ENTERED cabinet [%d]\n", pNum, rear + 1);
             sleep(3);
@@ -75,14 +76,14 @@ pthread_cond_t not_empty ;
         pthread_mutex_unlock(&mutex) ;
         //разбудить потоки-писатели после получения элемента из буфера
         pthread_cond_broadcast(&not_full) ;
-        if (buf[front] != 0) {
+        if (buf[front] != -1) {
             y = buf[front];
-            buf[front] = 0;
+            buf[front] = -1;
             //обработать полученный элемент
             printf("Patient %d: LEFT from cabinet [%d]\n", y, front + 1);
             sleep(3);
         }
-        sleep(3);
+        //sleep(3);
     }
     return NULL;
 }
@@ -95,10 +96,18 @@ int main() {
     pthread_cond_init(&not_empty, nullptr) ;
 
 
-    //запуск производителей
+    //запуск постетителей и администраторов
     std::cout << "Enter the number of patients today:" << std::endl;
     std::cin >> n;
     if (n > 0) {
+
+        pthread_t threadC[2];
+        int consumers[2];
+        for (i = 0; i < 2; i++) {
+            consumers[i] = i + 1;
+            pthread_create(&threadC[i], nullptr, Consumer, (void *) (consumers + i));
+        }
+
         pthread_t threadP[n];
         int producers[n];
         for (i = 0; i < n; i++) {
@@ -106,12 +115,6 @@ int main() {
             pthread_create(&threadP[i], nullptr, Producer, (void *) (producers + i));
         }
 
-        pthread_t threadC[2];
-        int consumers[2];
-        for (i = 0; i < 2; i++) {
-            consumers[0] = i + 1;
-            pthread_create(&threadC[i], nullptr, Consumer, (void *) (consumers + i));
-        }
 
         for (i = 0; i < n; i++) {
             pthread_join(threadP[i], nullptr);
