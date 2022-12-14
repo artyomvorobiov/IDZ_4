@@ -6,6 +6,7 @@
 
 const int bufSize = 3;
 int buf[3] = {-1,-1,-1} ; //буфер(кабинеты)
+int cab[3] = {-1, -1, -1};
 int front = 0 ; //индекс для чтения из буфера
 int rear = 0 ; //индекс для записи в буфер
 int count = 0 ; //количество занятых ячеек буфера
@@ -31,19 +32,21 @@ pthread_cond_t not_empty ;
         //поместить элемент в буфер
         pthread_mutex_lock(&mutex) ; //защита операции записи
 
-        //заснуть, если количество занятых кабинетов равно 3
-        while (count == bufSize ) {
+        //заснуть, если количество занятых кабинетов равно 0
+        while (count == 3) {
             pthread_cond_wait(&not_full, &mutex) ;
         }
 
         //запись в общий буфер
         rear = (rear+1)%bufSize ;
-        count++ ; //появилась занятая ячейка
+        count++ ;
+        // count++ ; //появилась занятая ячейка
 
         //конец критической секции
         pthread_mutex_unlock(&mutex) ;
         //sleep(1);
         if ((buf[rear%bufSize] == -1) && (buf[(rear+1)%bufSize] != pNum) && (buf[(rear+2)%bufSize] != pNum)) {
+            // count-- ;
             buf[rear] = pNum;
             printf("Patient %d: ENTERED cabinet [%d]\n", pNum, rear + 1);
             sleep(3);
@@ -62,7 +65,7 @@ pthread_cond_t not_empty ;
     while (1) {
         //извлечь элемент из буфера
         pthread_mutex_lock(&mutex) ; //защита операции чтения
-        //заснуть, если количество занятых кабинетов равно нулю
+        //заснуть, если количество занятых кабинетов равно 0
         while (count == 0) {
             pthread_cond_wait(&not_empty, &mutex) ;
         }
@@ -77,6 +80,7 @@ pthread_cond_t not_empty ;
         //разбудить потоки-писатели после получения элемента из буфера
         pthread_cond_broadcast(&not_full) ;
         if (buf[front] != -1) {
+            // count++ ;
             y = buf[front];
             buf[front] = -1;
             //обработать полученный элемент
