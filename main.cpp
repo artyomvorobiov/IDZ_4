@@ -11,6 +11,7 @@ int front = 0 ; //индекс для чтения из буфера
 int rear = 0 ; //индекс для записи в буфер
 int count = 0 ; //количество занятых ячеек буфера
 int y;
+// int t = 0;
 // инициализатор генератора случайных чисел
 
 pthread_mutex_t mutex ; // мьютекс для условных переменных
@@ -26,6 +27,7 @@ pthread_cond_t not_empty ;
 //стартовая функция потоков – посетители
 [[noreturn]] void *Producer(void *param) {
     int pNum = *((int*)param);
+    // t = rand()&pNum;
     int data, i ;
     while (1) {
         //создать элемент для буфера
@@ -33,22 +35,24 @@ pthread_cond_t not_empty ;
         pthread_mutex_lock(&mutex) ; //защита операции записи
 
         //заснуть, если количество занятых кабинетов равно 0
-        while (count == 3) {
+        while (count == 0) {
             pthread_cond_wait(&not_full, &mutex) ;
         }
 
         //запись в общий буфер
-        rear = (rear+1)%bufSize ;
-        count++ ;
+        front = (front+1)%bufSize ;
+        count-- ;
         // count++ ; //появилась занятая ячейка
 
         //конец критической секции
         pthread_mutex_unlock(&mutex) ;
         //sleep(1);
-        if ((buf[rear%bufSize] == -1) && (buf[(rear+1)%bufSize] != pNum) && (buf[(rear+2)%bufSize] != pNum)) {
-            // count-- ;
-            buf[rear] = pNum;
-            printf("Patient %d: ENTERED cabinet [%d]\n", pNum, rear + 1);
+        if (cab[front] != -1) {
+            // count++ ;
+            y = cab[front];
+            cab[front] = -1;
+            //обработать полученный элемент
+            printf("Patient %d: LEFT from cabinet [%d]\n", y, front + 1);
             sleep(3);
         }
         //sleep(3);
@@ -66,25 +70,24 @@ pthread_cond_t not_empty ;
         //извлечь элемент из буфера
         pthread_mutex_lock(&mutex) ; //защита операции чтения
         //заснуть, если количество занятых кабинетов равно 0
-        while (count == 0) {
+        while (count == 3) {
             pthread_cond_wait(&not_empty, &mutex) ;
         }
 
         //изъятие из общего буфера – начало критической секции
-        front = (front+1)%bufSize ; //критическая секция
-        count-- ; //занятая ячейка стала свободной
+        // front = (front+1)%bufSize ; //критическая секция
+        rear = (rear+1)%bufSize ;
+        count++ ; //занятая ячейка стала свободной
 
         //конец критической секции
 
         pthread_mutex_unlock(&mutex) ;
         //разбудить потоки-писатели после получения элемента из буфера
         pthread_cond_broadcast(&not_full) ;
-        if (buf[front] != -1) {
-            // count++ ;
-            y = buf[front];
-            buf[front] = -1;
-            //обработать полученный элемент
-            printf("Patient %d: LEFT from cabinet [%d]\n", y, front + 1);
+        if ((cab[rear%bufSize] == -1) && (cab[(rear+1)%bufSize] != cNum) && (cab[(rear+2)%bufSize] != cNum)) {
+            // count-- ;
+            cab[rear] = cNum;
+            printf("Patient %d: ENTERED cabinet [%d]\n", cNum, rear + 1);
             sleep(3);
         }
         //sleep(3);
@@ -105,19 +108,20 @@ int main() {
     std::cin >> n;
     if (n > 0) {
 
-        pthread_t threadC[2];
-        int consumers[2];
+        pthread_t threadP[2];
+        int producers[2];
         for (i = 0; i < 2; i++) {
+            producers[i] = i + 1;
+            pthread_create(&threadP[i], nullptr, Producer, (void *) (producers + i));
+        }
+
+        pthread_t threadC[n];
+        int consumers[n];
+        for (i = 0; i < n; i++) {
             consumers[i] = i + 1;
             pthread_create(&threadC[i], nullptr, Consumer, (void *) (consumers + i));
         }
 
-        pthread_t threadP[n];
-        int producers[n];
-        for (i = 0; i < n; i++) {
-            producers[i] = i + 1;
-            pthread_create(&threadP[i], nullptr, Producer, (void *) (producers + i));
-        }
 
 
         for (i = 0; i < n; i++) {
