@@ -41,7 +41,7 @@ pthread_cond_t not_empty ;
         //запись в общий буфер
         front = (front+1)%bufSize ;
         count-- ; // ячейка освободила, можно пускать след человека
-       
+
         //конец критической секции
         pthread_mutex_unlock(&mutex) ;
         //sleep(1);
@@ -93,17 +93,31 @@ pthread_cond_t not_empty ;
     return NULL;
 }
 
-int main() {
+int main(int argc, char**argv) {
     int i = 0, n;
     //инициализация мутексов и семафоров
     pthread_mutex_init(&mutex, nullptr) ;
     pthread_cond_init(&not_full, nullptr) ;
     pthread_cond_init(&not_empty, nullptr) ;
 
+    if (argc != 1) {
+        int k;
+        if (std::isdigit(*argv[1])){
+            k = std::stoi(argv[1]);
+            n = k;
+        }
+        else {
+            std::throw_with_nested("Type number please");
+        }
+        // k = std::stoi(argv[1]);
 
-    //запуск постетителей и администраторов
-    std::cout << "Enter the number of patients today:" << std::endl;
-    std::cin >> n;
+        //n = k;
+    }
+    else {
+        //запуск постетителей и администраторов
+        std::cout << "Enter the number of patients today:" << std::endl;
+        std::cin >> n;
+    }
     if (n > 0) {
 
         pthread_t threadP[2];
